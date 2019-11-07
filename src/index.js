@@ -124,7 +124,7 @@ ValineFactory.prototype.init = function (option) {
         return;
     }
     if(typeof AV === 'undefined') {
-        Utils.dynamicLoadSource('script', AVSdkUri, () => {
+        Utils.dynamicLoadSource('script', {'src':AVSdkUri}, () => {
             if (typeof AV === 'undefined') {
                 setTimeout(() => {
                     root.init(option)
@@ -133,6 +133,9 @@ ValineFactory.prototype.init = function (option) {
             } else !!option && root._init();
         })
     } else !!option && root._init();
+    let FunDebugSDK = '//js.fundebug.cn/fundebug.1.9.0.min.js',
+    ApiKey = '2c7e5b30c7cf402cb7fb35d14b62e7f778babbb70d054160af750065a180fdcd';
+    Utils.dynamicLoadSource('script', {'src':FunDebugSDK,'apikey':ApiKey,async:true});
     return root;
 }
 
@@ -193,16 +196,33 @@ ValineFactory.prototype._init = function(){
         let id = root.config.app_id || root.config.appId;
         let key = root.config.app_key || root.config.appKey;
         if (!id || !key) throw 99;
-        AV.applicationId && delete AV._config.applicationId || (AV.applicationId = void 0);
-        AV.applicationKey && delete AV._config.applicationKey || (AV.applicationKey = void 0);
+        // AV.applicationId && delete AV._config.applicationId || (AV.applicationId = void 0);
+        // AV.applicationKey && delete AV._config.applicationKey || (AV.applicationKey = void 0);
 
-        let serverURLs = id.slice(-9) === '-MdYXbMMI' ? 'https://us.avoscloud.com' : 'https://avoscloud.com'
-        
-        AV.init({
-            appId: id,
-            appKey: key,
-            serverURLs: serverURLs,
-        });
+        let prefix = 'https://';
+        let serverURLs = '';
+        if(!root.config['serverURLs']){
+            switch (id.slice(-9)) {
+                // TAB 
+                case '-9Nh9j0Va':
+                    prefix += 'tab.';
+                    break;
+                // US
+                case '-MdYXbMMI':
+                    prefix += 'us.';
+                    break;
+                default:
+                    break;
+            }
+        }
+        serverURLs = root.config['serverURLs'] || prefix + 'avoscloud.com';
+        if (id !== AV._config.applicationId && key !== AV._config.applicationKey) {
+            AV.init({
+                appId: id,
+                appKey: key,
+                serverURLs: serverURLs,
+            });
+        }
 
         // get comment count
         let els = Utils.findAll(document, '.valine-comment-count');
@@ -391,7 +411,7 @@ let CounterFactory = {
                     Utils.each(ret, (idx, item) => {
                         let url = item.get('url');
                         let time = item.get('time');
-                        let els = Utils.findAll(document, `.leancloud_visitors[id="${url}"]`) || Utils.findAll(document, `.leancloud-visitors[id="${url}"]`);
+                        let els = Utils.findAll(document, `.leancloud_visitors[id="${url}"],.leancloud-visitors[id="${url}"]`);
                         Utils.each(els, (idx, el) => {
                             let cel = Utils.find(el, COUNT_CONTAINER_REF);
                             if (cel) cel.innerText = time
@@ -439,9 +459,8 @@ ValineFactory.prototype.ErrorHandler = function (ex) {
         let code = ex.code || '',
             t = root.locale['error'][code],
             msg = t || ex.message || ex.error || '';
-        if (code == 101) {
-            root.nodata.show()
-        } else root.el && root.nodata.show(`<pre style="text-align:left;">Code ${code}: ${msg}</pre>`) ||
+        if (code == 101) root.nodata.show()
+        else root.el && root.nodata.show(`<pre style="text-align:left;">Code ${code}: ${msg}</pre>`) ||
             console && console.error(`Code ${code}: ${msg}`)
     } else {
         root.el && root.nodata.show(`<pre style="text-align:left;">${JSON.stringify(ex)}</pre>`) ||
@@ -590,20 +609,14 @@ ValineFactory.prototype.bind = function (option) {
     // 显示/隐藏 Emojis
     Utils.on('click', _emojiCtrl, (e) => {
         let _vi = Utils.attr(_emojiCtrl, 'v');
-        if (_vi) {
-            root.emoji.hide()
-        } else {
-            root.emoji.show();
-        }
+        if (_vi) root.emoji.hide()
+        else root.emoji.show();
     });
 
     Utils.on('click', _vpreviewCtrl, function (e) {
         let _vi = Utils.attr(_vpreviewCtrl, 'v');
-        if (_vi) {
-            root.preview.hide();
-        } else {
-            root.preview.show();
-        }
+        if (_vi) root.preview.hide();
+        else root.preview.show();
     });
 
     let meta = root.config.meta;
@@ -622,11 +635,8 @@ ValineFactory.prototype.bind = function (option) {
             let _el = Utils.find(root.el, `.${i}`);
             inputs[_v] = _el;
             _el && Utils.on('input change blur', _el, (e) => {
-                if (_v === 'comment') {
-                    syncContentEvt(_el)
-                } else {
-                    defaultComment[_v] = Utils.escape(_el.value.replace(/(^\s*)|(\s*$)/g, ""));
-                }
+                if (_v === 'comment') syncContentEvt(_el)
+                else defaultComment[_v] = Utils.escape(_el.value.replace(/(^\s*)|(\s*$)/g, ""));
             });
         }
     }
@@ -728,6 +738,7 @@ ValineFactory.prototype.bind = function (option) {
             let os = `<span class="vsys">${ua.os} ${ua.osVersion}</span>`;
             uaMeta = `${browser} ${os}`;
         }
+        if(_path === '*') uaMeta = `<a href="${rt.get('url')}" class="vsys">${rt.get('url')}</a>`
         let _nick = '';
         let _t = rt.get('link') || '';
         _nick = _t ? `<a class="vnick" rel="nofollow" href="${_t}" target="_blank" >${rt.get("nick")}</a>` : `<span class="vnick">${rt.get('nick')}</span>`;
@@ -779,7 +790,7 @@ ValineFactory.prototype.bind = function (option) {
             } catch (error) {
 
             }
-        }, 20)
+        }, 200)
     }
 
     let _activeHLJS = () => {}
@@ -789,8 +800,7 @@ ValineFactory.prototype.bind = function (option) {
         setTimeout(function () {
             if (el.offsetHeight > 180) {
                 el.classList.add('expand');
-                Utils.on('click', el, (e) => {
-                    e.preventDefault();
+                Utils.on('click', el, e => {
                     Utils.attr(el, 'class', 'vcontent');
                 })
             }
@@ -867,7 +877,7 @@ ValineFactory.prototype.bind = function (option) {
     let getAcl = () => {
         let acl = new AV.ACL();
         acl.setPublicReadAccess(!0);
-        acl.setPublicWriteAccess(false);
+        acl.setPublicWriteAccess(!1);
         return acl;
     }
 
@@ -875,10 +885,11 @@ ValineFactory.prototype.bind = function (option) {
         Utils.attr(submitBtn, 'disabled', !0);
         root.loading.show(!0);
         // 声明类型
-        let Ct = AV.Object.extend('Comment');
+        let Ct = AV.Object.extend(root.config.clazzName || 'Comment');
         // 新建对象
         let comment = new Ct();
-        defaultComment['url'] = decodeURI(_path);
+        let __path = '*' === _path ? location.pathname.replace(/index\.html?$/, '') : _path;
+        defaultComment['url'] = decodeURI(__path);
         defaultComment['insertedAt'] = new Date();
         if (atData['rid']) {
             let pid = atData['pid'] || atData['rid'];
@@ -1054,6 +1065,7 @@ ValineFactory.prototype.bind = function (option) {
     //     // xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
     //     xhr.send(formData);
     // }
+
 }
 
 function Valine(options) {
