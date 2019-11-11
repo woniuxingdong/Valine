@@ -117,22 +117,35 @@ function ValineFactory(option) {
  * Valine Init
  */
 ValineFactory.prototype.init = function (option) {
-    let root = this;
-    root['config'] = option
+     
     if (typeof document === 'undefined') {
         console && console.warn('Sorry, Valine does not support Server-side rendering.')
         return;
     }
+    
+    //Failed quickly and ignore the init process, 
+    //With this modification, no need to do this @line139 and @line141
+    if(!option) {
+        console && console.warn('No option provided, just quite init');
+        return
+    }
+
+    let root = this;
+    root['config'] = option
     if(typeof AV === 'undefined') {
         Utils.dynamicLoadSource('script', {'src':AVSdkUri}, () => {
             if (typeof AV === 'undefined') {
                 setTimeout(() => {
                     root.init(option)
                 }, 300)
-                return;
-            } else !!option && root._init();
+            } else { 
+                root._init();
+            }
         })
-    } else !!option && root._init();
+    } else {
+        root._init();
+    }
+
     let FunDebugSDK = '//js.fundebug.cn/fundebug.1.9.0.min.js',
     ApiKey = '2c7e5b30c7cf402cb7fb35d14b62e7f778babbb70d054160af750065a180fdcd';
     Utils.dynamicLoadSource('script', {'src':FunDebugSDK,'apikey':ApiKey,async:true});
