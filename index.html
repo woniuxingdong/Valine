@@ -121,7 +121,7 @@
             color: #9c9c9c;
         }
     </style>
-    <script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+    <!--<script src="https://cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>-->
     <script src="./dist/Valine.min.js"></script>
 </head>
 
@@ -158,8 +158,9 @@
             avatar:'mm', // 1.1.7 新增(mm/identicon/monsterid/wavatar/retro)
             // guest_info: ['nick'] // 默认 ['nick', 'mail', 'link']
         })
-
-        if (!/^http:\/\/localhost/.test(location.href)) {
+        
+        var dev = true
+        if (!dev) {
             var _hmt = _hmt || [];
             var hm = document.createElement("script");
             hm.src = "https://hm.baidu.com/hm.js?fc2301b16d1a46c7899ef2b5afb651cc";
